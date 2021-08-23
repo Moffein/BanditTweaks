@@ -4,11 +4,12 @@ using RoR2;
 using UnityEngine;
 using EntityStates;
 using BepInEx.Configuration;
+using EntityStates.Bandit2;
 
 namespace BanditTweaks
 {
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.2.1")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.2.2")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -137,6 +138,34 @@ namespace BanditTweaks
                 orig(self);
 
                 Util.PlaySound(EntityStates.Bandit2.StealthMode.exitStealthSound, self.gameObject);
+            };
+
+            On.EntityStates.Bandit2.StealthMode.FireSmokebomb += (orig, self) =>
+            {
+                if (self.isAuthority)
+                {
+                    BlastAttack blastAttack = new BlastAttack();
+                    blastAttack.radius = StealthMode.blastAttackRadius;
+                    blastAttack.procCoefficient = StealthMode.blastAttackProcCoefficient;
+                    blastAttack.position = self.transform.position;
+                    blastAttack.attacker = self.gameObject;
+                    blastAttack.crit = self.characterBody.RollCrit();
+                    blastAttack.baseDamage = self.damageStat * StealthMode.blastAttackDamageCoefficient;
+                    blastAttack.falloffModel = BlastAttack.FalloffModel.None;
+                    blastAttack.damageType = DamageType.Stun1s;
+                    blastAttack.baseForce = StealthMode.blastAttackForce;
+                    blastAttack.teamIndex = TeamComponent.GetObjectTeam(blastAttack.attacker);
+                    blastAttack.attackerFiltering = AttackerFiltering.NeverHit;
+                    blastAttack.Fire();
+                }
+                if (StealthMode.smokeBombEffectPrefab)
+                {
+                    EffectManager.SimpleMuzzleFlash(StealthMode.smokeBombEffectPrefab, self.gameObject, StealthMode.smokeBombMuzzleString, false);
+                }
+                if (self.characterMotor)
+                {
+                    self.characterMotor.velocity = new Vector3(self.characterMotor.velocity.x, StealthMode.shortHopVelocity, self.characterMotor.velocity.z);
+                }
             };
 
             On.EntityStates.Bandit2.ThrowSmokebomb.OnEnter += (orig, self) =>
