@@ -9,7 +9,7 @@ using EntityStates.Bandit2;
 namespace BanditTweaks
 {
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.2.4")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.2.5")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -39,7 +39,7 @@ namespace BanditTweaks
             selectWithScrollWheel = base.Config.Bind<bool>(new ConfigDefinition("01 - Primary", "Select with ScrollWheel"), true, new ConfigDescription("Scroll wheel swaps between firemodes.")).Value;
             selectButton = base.Config.Bind<KeyCode>(new ConfigDefinition("01 - Primary", "Select Button"), KeyCode.None, new ConfigDescription("Button to swap between firemodes.")).Value;
             defaultButton = base.Config.Bind<KeyCode>(new ConfigDefinition("01 - Primary", "Tapfire Button"), KeyCode.None, new ConfigDescription("Button to swap to Default firemode.")).Value;
-            burstButton = base.Config.Bind<KeyCode>(new ConfigDefinition("01 - Primary", "Tapfire Button"), KeyCode.None, new ConfigDescription("Button to swap to Burst firemode.")).Value;
+            burstButton = base.Config.Bind<KeyCode>(new ConfigDefinition("01 - Primary", "Burstfire Button"), KeyCode.None, new ConfigDescription("Button to swap to Burst firemode.")).Value;
             float autoFireDuration = base.Config.Bind<float>(new ConfigDefinition("01 - Primary", "Default Fire Rate"), 0.3f, new ConfigDescription("How long it takes to autofire shots on the Default firemode.")).Value;
             float burstFireDuration = base.Config.Bind<float>(new ConfigDefinition("01 - Primary", "Burst Fire Rate"), 0.1f, new ConfigDescription("How long it takes to autofire shots on the Burst firemode.")).Value;
             bool prioritizeReload = base.Config.Bind<bool>(new ConfigDefinition("01 - Primary", "Prioritize Reload"), false, new ConfigDescription("Makes reloading take priority over shooting.")).Value;
