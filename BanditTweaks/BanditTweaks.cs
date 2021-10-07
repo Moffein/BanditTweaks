@@ -9,7 +9,7 @@ using EntityStates.Bandit2;
 namespace BanditTweaks
 {
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.2.2")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.2.3")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -43,6 +43,8 @@ namespace BanditTweaks
             float autoFireDuration = base.Config.Bind<float>(new ConfigDefinition("01 - Primary", "Default Fire Rate"), 0.3f, new ConfigDescription("How long it takes to autofire shots on the Default firemode.")).Value;
             float burstFireDuration = base.Config.Bind<float>(new ConfigDefinition("01 - Primary", "Burst Fire Rate"), 0.1f, new ConfigDescription("How long it takes to autofire shots on the Burst firemode.")).Value;
             bool prioritizeReload = base.Config.Bind<bool>(new ConfigDefinition("01 - Primary", "Prioritize Reload"), false, new ConfigDescription("Makes reloading take priority over shooting.")).Value;
+            float burstBulletRadius = base.Config.Bind<float>(new ConfigDefinition("01a - Burst", "Bullet Radius"), 0.3f, new ConfigDescription("How wide bullets are (0 is vanilla).")).Value;
+            float blastBulletRadius = base.Config.Bind<float>(new ConfigDefinition("01b - Blast", "Bullet Radius"), 0.4f, new ConfigDescription("How wide bullets are (0 is vanilla).")).Value;
             bool cloakAnim = base.Config.Bind<bool>(new ConfigDefinition("03 - Utility", "Smokebomb Anim while grounded"), true, new ConfigDescription("Enable the Smokebomb animation when on the ground.")).Value;
 
             if (BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("de.userstorm.banditweaponmodes"))
@@ -75,6 +77,24 @@ namespace BanditTweaks
             skills.special.skillFamily.variants[0].skillDef.canceledFromSprinting = specialSprintCancel;
             skills.special.skillFamily.variants[1].skillDef.canceledFromSprinting = specialSprintCancel;
 
+            if (burstBulletRadius > 0f)
+            {
+                On.EntityStates.Bandit2.Weapon.FireShotgun2.ModifyBullet += (orig, self, bulletAttack) =>
+                {
+                    bulletAttack.radius = burstBulletRadius;
+                    orig(self, bulletAttack);
+                };
+            }
+
+            if (blastBulletRadius > 0f)
+            {
+                On.EntityStates.Bandit2.Weapon.Bandit2FireRifle.ModifyBullet += (orig, self, bulletAttack) =>
+                {
+                    bulletAttack.radius = blastBulletRadius;
+                    orig(self, bulletAttack);
+                };
+            }
+
             if (enableAutoFire)
             {
                 skills.primary.skillFamily.variants[0].skillDef.mustKeyPress = false;
@@ -101,6 +121,10 @@ namespace BanditTweaks
                     else
                     {
                         self.minimumBaseDuration = burstFireDuration;
+                    }
+                    if (self.skillLocator.primary.stock > self.skillLocator.primary.maxStock)
+                    {
+                        self.skillLocator.primary.stock = self.skillLocator.primary.maxStock;
                     }
                     orig(self);
                 };
