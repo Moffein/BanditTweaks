@@ -9,7 +9,7 @@ using EntityStates.Bandit2;
 namespace BanditTweaks
 {
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.2.3")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.2.4")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -66,7 +66,7 @@ namespace BanditTweaks
 
             bool specialHold = base.Config.Bind<bool>(new ConfigDefinition("04 - Special", "Hold to Aim"), true, new ConfigDescription("The Special button can be held down to aim your shot. The shot will only shoot once you release.")).Value;
             bool specialSprintCancel = base.Config.Bind<bool>(new ConfigDefinition("04 - Special", "Cancel by Sprinting"), false, new ConfigDescription("Sprinting cancels your special.")).Value;
-            float graceDuration = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Grace Period Duration"), 0.5f, new ConfigDescription("*SERVER-SIDE* Triggers Special on-kill effect if enemy dies within this time window. 0 disables.")).Value;
+            float graceDuration = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Grace Period Duration"), 1f, new ConfigDescription("*SERVER-SIDE* Triggers Special on-kill effect if enemy dies within this time window. 0 disables.")).Value;
             float executeThreshold = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Execute Threshold"), 0f, new ConfigDescription("*SERVER-SIDE* Bandit's Specials instanatly kill enemies below this HP percent. 0 = disabled, 1.0 = 100% HP.")).Value;
             GracePeriodComponent.graceDuration = graceDuration;
 
