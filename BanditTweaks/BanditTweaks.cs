@@ -9,7 +9,7 @@ using EntityStates.Bandit2;
 namespace BanditTweaks
 {
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.4.2")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.4.3")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -284,7 +284,7 @@ namespace BanditTweaks
                         }
                     }
 
-                    if (damageInfo.damage > 0f && damageInfo.crit)
+                    if (backstabCritBonus > 1f && damageInfo.damage > 0f && damageInfo.crit)
                     {
                         Vector3 vector = attackerBody.corePosition - damageInfo.position;
                         if ((attackerBody.canPerformBackstab && (damageInfo.damageType & DamageType.DoT) != DamageType.DoT && (!damageInfo.procChainMask.HasProc(ProcType.Backstab) )
