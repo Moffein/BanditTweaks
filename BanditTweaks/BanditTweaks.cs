@@ -9,7 +9,7 @@ using EntityStates.Bandit2;
 namespace BanditTweaks
 {
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.2.5")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.4.0")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -23,6 +23,7 @@ namespace BanditTweaks
         KeyCode selectButton = KeyCode.None;
         KeyCode defaultButton = KeyCode.None;
         KeyCode burstButton = KeyCode.None;
+        bool slayerFix = true;
 
         public static bool quickdrawEnabled = false;
 
@@ -76,6 +77,7 @@ namespace BanditTweaks
                 cloakRequireRepress = true;
             }
 
+            slayerFix = base.Config.Bind<bool>(new ConfigDefinition("04 - Special", "Slayer Fix"), true, new ConfigDescription("*SERVER-SIDE* Slayer (bonus damage against low HP enemies) now affects procs.")).Value;
             bool specialHold = base.Config.Bind<bool>(new ConfigDefinition("04 - Special", "Hold to Aim"), true, new ConfigDescription("The Special button can be held down to aim your shot. The shot will only shoot once you release.")).Value;
             bool specialSprintCancel = base.Config.Bind<bool>(new ConfigDefinition("04 - Special", "Cancel by Sprinting"), false, new ConfigDescription("Sprinting cancels your special.")).Value;
             float graceDuration = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Grace Period Duration"), 1f, new ConfigDescription("*SERVER-SIDE* Triggers Special on-kill effect if enemy dies within this time window. 0 disables.")).Value;
@@ -309,6 +311,12 @@ namespace BanditTweaks
                             }
                         }
                     }
+                }
+
+                if (slayerFix && (damageInfo.damageType & DamageType.BonusToLowHealth) > DamageType.Generic)
+                {
+                    damageInfo.damageType &= ~DamageType.BonusToLowHealth;
+                    damageInfo.damage *= Mathf.Lerp(3f, 1f, self.combinedHealthFraction);
                 }
 
                 orig(self, damageInfo);
