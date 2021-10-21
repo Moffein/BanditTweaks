@@ -9,7 +9,7 @@ using EntityStates.Bandit2;
 namespace BanditTweaks
 {
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.4.0")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.4.1")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -296,7 +296,7 @@ namespace BanditTweaks
                                 {
                                     attacker = damageInfo.attacker,
                                     crit = damageInfo.crit,
-                                    damage = damageInfo.damage * 0.5f,
+                                    damage = damageInfo.damage * (backstabCritBonus - 1f),
                                     damageColorIndex = damageInfo.damageColorIndex,
                                     damageType = damageInfo.damageType & ~DamageType.SuperBleedOnCrit,
                                     dotIndex = damageInfo.dotIndex,
