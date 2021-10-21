@@ -9,7 +9,7 @@ using EntityStates.Bandit2;
 namespace BanditTweaks
 {
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.4.1")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.4.2")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -244,6 +244,12 @@ namespace BanditTweaks
 
             On.RoR2.HealthComponent.TakeDamage += (orig, self, damageInfo) =>
             {
+                if (slayerFix && (damageInfo.damageType & DamageType.BonusToLowHealth) > DamageType.Generic)
+                {
+                    damageInfo.damageType &= ~DamageType.BonusToLowHealth;
+                    damageInfo.damage *= Mathf.Lerp(3f, 1f, self.combinedHealthFraction);
+                }
+
                 bool backstabSecondHit = false;
                 DamageInfo backstabSecondDamageInfo = null;
 
@@ -311,12 +317,6 @@ namespace BanditTweaks
                             }
                         }
                     }
-                }
-
-                if (slayerFix && (damageInfo.damageType & DamageType.BonusToLowHealth) > DamageType.Generic)
-                {
-                    damageInfo.damageType &= ~DamageType.BonusToLowHealth;
-                    damageInfo.damage *= Mathf.Lerp(3f, 1f, self.combinedHealthFraction);
                 }
 
                 orig(self, damageInfo);
