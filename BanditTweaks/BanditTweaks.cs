@@ -8,8 +8,9 @@ using EntityStates.Bandit2;
 
 namespace BanditTweaks
 {
+    [BepInDependency("com.RiskyLives.RiskyMod", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.4.3")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.4.4")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -82,8 +83,15 @@ namespace BanditTweaks
             bool specialSprintCancel = base.Config.Bind<bool>(new ConfigDefinition("04 - Special", "Cancel by Sprinting"), false, new ConfigDescription("Sprinting cancels your special.")).Value;
             float graceDuration = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Grace Period Duration"), 1f, new ConfigDescription("*SERVER-SIDE* Triggers Special on-kill effect if enemy dies within this time window. 0 disables.")).Value;
             float executeThreshold = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Execute Threshold"), 0f, new ConfigDescription("*SERVER-SIDE* Bandit's Specials instanatly kill enemies below this HP percent. 0 = disabled, 1.0 = 100% HP.")).Value;
-            GracePeriodComponent.graceDuration = graceDuration;
+            
 
+            if (BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("com.RiskyLives.RiskyMod"))
+            {
+                slayerFix = false;
+                graceDuration = 0f;
+            }
+
+            GracePeriodComponent.graceDuration = graceDuration;
             GameObject BanditObject = Resources.Load<GameObject>("prefabs/characterbodies/bandit2body");
             SkillLocator skills = BanditObject.GetComponent<SkillLocator>();
 
