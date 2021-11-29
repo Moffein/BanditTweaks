@@ -10,7 +10,7 @@ namespace BanditTweaks
 {
     [BepInDependency("com.RiskyLives.RiskyMod", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.4.4")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.5.0")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -53,12 +53,12 @@ namespace BanditTweaks
             float autoFireDuration = base.Config.Bind<float>(new ConfigDefinition("01 - Primary", "Tap Fire Rate"), 0.3f, new ConfigDescription("How long it takes to autofire shots on the Default firemode.")).Value;
             float burstFireDuration = base.Config.Bind<float>(new ConfigDefinition("01 - Primary", "Spam Fire Rate"), 0.12f, new ConfigDescription("How long it takes to autofire shots on the Burst firemode.")).Value;
             bool prioritizeReload = base.Config.Bind<bool>(new ConfigDefinition("01 - Primary", "Prioritize Reload"), false, new ConfigDescription("Makes reloading take priority over shooting.")).Value;
-            
 
-            
             float burstBulletRadius = base.Config.Bind<float>(new ConfigDefinition("01a - Burst", "Bullet Radius"), 0.3f, new ConfigDescription("How wide bullets are (0 is vanilla).")).Value;
             float blastBulletRadius = base.Config.Bind<float>(new ConfigDefinition("01b - Blast", "Bullet Radius"), 0.4f, new ConfigDescription("How wide bullets are (0 is vanilla).")).Value;
-            
+
+            bool knifeTweaks = base.Config.Bind<bool>(new ConfigDefinition("02 - Secondary", "Serrated Dagger Tweaks"), true, new ConfigDescription("Serrated Dagger lunges while sprinting and has a larger hitbox.")).Value;
+
             bool cloakAnim = base.Config.Bind<bool>(new ConfigDefinition("03 - Utility", "Smokebomb Anim while grounded"), true, new ConfigDescription("Enable the Smokebomb animation when on the ground.")).Value;
 
             if (BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("de.userstorm.banditweaponmodes"))
@@ -69,6 +69,48 @@ namespace BanditTweaks
             if (!enableAutoFire)
             {
                 enableFireSelect = false;
+            }
+
+            if (knifeTweaks)
+            {
+                //Increase Hitbox Size
+                CharacterBody cb = RoR2Content.Survivors.Bandit2.bodyPrefab.GetComponent<CharacterBody>();
+                HitBoxGroup hbg = cb.GetComponentInChildren<HitBoxGroup>();
+                if (hbg.groupName == "SlashBlade")
+                {
+                    Transform hitboxTransform = hbg.hitBoxes[0].transform;
+                    hitboxTransform.localScale = new Vector3(hitboxTransform.localScale.x, hitboxTransform.localScale.y * 1.4f, hitboxTransform.localScale.z * 1.3f);
+                    hitboxTransform.localPosition += new Vector3(0f, 0f, 1f);
+                }
+
+                Keyframe kf1 = new Keyframe(0f, 3f, -8.182907104492188f, -3.3333332538604738f, 0f, 0.058712735772132876f);
+                kf1.weightedMode = WeightedMode.None;
+                kf1.tangentMode = 65;
+
+                Keyframe kf2 = new Keyframe(0.3f, 0f, -3.3333332538604738f, -3.3333332538604738f, 0.3333333432674408f, 0.3333333432674408f);    //Time should match up with SlashBlade min duration (hitbox length)
+                kf2.weightedMode = WeightedMode.None;
+                kf2.tangentMode = 34;
+
+                Keyframe[] keyframes = new Keyframe[2];
+                keyframes[0] = kf1;
+                keyframes[1] = kf2;
+
+                AnimationCurve knifeVelocity = new AnimationCurve
+                {
+                    preWrapMode = WrapMode.ClampForever,
+                    postWrapMode = WrapMode.ClampForever,
+                    keys = keyframes
+                };
+
+                On.EntityStates.Bandit2.Weapon.SlashBlade.OnEnter += (orig, self) =>
+                {
+                    orig(self);
+                    if (self.characterBody && self.characterBody.isSprinting)
+                    {
+                        self.forceForwardVelocity = true;
+                        self.forwardVelocityCurve = knifeVelocity;
+                    }
+                };
             }
 
             bool cloakRequireRepress = !base.Config.Bind<bool>(new ConfigDefinition("03 - Utility", "Hold to Cloak"), true, new ConfigDescription("Holding down the Utility button cloaks you as soon as it is off cooldown.")).Value;
