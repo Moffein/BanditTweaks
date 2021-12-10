@@ -59,6 +59,9 @@
     <Reference Include="R2API">
       <HintPath>libs\R2API.dll</HintPath>
     </Reference>
+    <Reference Include="RiskyMod">
+      <HintPath>libs\RiskyMod.dll</HintPath>
+    </Reference>
     <Reference Include="Unity.TextMeshPro">
       <HintPath>libs\Unity.TextMeshPro.dll</HintPath>
     </Reference>

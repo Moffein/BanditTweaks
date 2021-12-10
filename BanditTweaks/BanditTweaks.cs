@@ -5,12 +5,16 @@ using UnityEngine;
 using EntityStates;
 using BepInEx.Configuration;
 using EntityStates.Bandit2;
+using System.Runtime.CompilerServices;
+using R2API.Utils;
+using MonoMod.RuntimeDetour;
 
 namespace BanditTweaks
 {
     [BepInDependency("com.RiskyLives.RiskyMod", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.5.0")]
+    [BepInDependency("com.bepis.r2api")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.5.2")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -27,11 +31,30 @@ namespace BanditTweaks
         bool slayerFix = true;
 
         public static bool quickdrawEnabled = false;
+        public static bool RiskyModLoaded = false;
 
         bool backstabBandFix = true;
 
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+        private bool CheckRiskyModBandit2Core()
+        {
+            return !RiskyMod.Survivors.Bandit2.Bandit2Core.enabled;
+        }
+
         public void Awake()
         {
+            RiskyModLoaded = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("com.RiskyLives.RiskyMod");
+            bool shouldRun = true;
+            if (RiskyModLoaded)
+            {
+                shouldRun = CheckRiskyModBandit2Core();
+            }
+            if (!shouldRun)
+            {
+                Debug.LogError("BanditTweaks: RiskyMod's Bandit changes are enabled, aborting Awake(). BanditTweaks and RiskyMod's Bandit changes are highly incompatible, so you should disable this mod or RiskyMod's Bandit tweaks in the config.");
+                return;
+            }
+
             float backstabCritBonus = base.Config.Bind<float>(new ConfigDefinition("00 - Passive", "Backstab Crit Bonus"), 1.5f, new ConfigDescription("*SERVER-SIDE* Multiply backstab damage if the attack is already a crit. Set to 1 to disable.")).Value;
             if (backstabCritBonus < 1f)
             {
@@ -58,6 +81,7 @@ namespace BanditTweaks
             float blastBulletRadius = base.Config.Bind<float>(new ConfigDefinition("01b - Blast", "Bullet Radius"), 0.4f, new ConfigDescription("How wide bullets are (0 is vanilla).")).Value;
 
             bool knifeTweaks = base.Config.Bind<bool>(new ConfigDefinition("02 - Secondary", "Serrated Dagger Tweaks"), true, new ConfigDescription("Serrated Dagger lunges while sprinting and has a larger hitbox.")).Value;
+            bool noKnifeAttackSpeed = base.Config.Bind<bool>(new ConfigDefinition("02 - Secondary", "Serrated Dagger Minimum Duration"), true, new ConfigDescription("Serrated Dagger has a minimum duration of 0.3s so that the lunge doesn't stop working at high attack speeds.")).Value;
 
             bool cloakAnim = base.Config.Bind<bool>(new ConfigDefinition("03 - Utility", "Smokebomb Anim while grounded"), true, new ConfigDescription("Enable the Smokebomb animation when on the ground.")).Value;
 
@@ -104,6 +128,10 @@ namespace BanditTweaks
 
                 On.EntityStates.Bandit2.Weapon.SlashBlade.OnEnter += (orig, self) =>
                 {
+                    if (noKnifeAttackSpeed)
+                    {
+                        self.ignoreAttackSpeed = true;
+                    }
                     orig(self);
                     if (self.characterBody && self.characterBody.isSprinting)
                     {
@@ -111,6 +139,12 @@ namespace BanditTweaks
                         self.forwardVelocityCurve = knifeVelocity;
                     }
                 };
+
+                if (noKnifeAttackSpeed)
+                {
+                    var getBandit2SlashBladeMinDuration = new Hook(typeof(EntityStates.Bandit2.Weapon.SlashBlade).GetMethodCached("get_minimumDuration"),
+                    typeof(BanditTweaks).GetMethodCached(nameof(GetBandit2SlashBladeMinDurationHook)));
+                }
             }
 
             bool cloakRequireRepress = !base.Config.Bind<bool>(new ConfigDefinition("03 - Utility", "Hold to Cloak"), true, new ConfigDescription("Holding down the Utility button cloaks you as soon as it is off cooldown.")).Value;
@@ -127,7 +161,7 @@ namespace BanditTweaks
             float executeThreshold = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Execute Threshold"), 0f, new ConfigDescription("*SERVER-SIDE* Bandit's Specials instanatly kill enemies below this HP percent. 0 = disabled, 1.0 = 100% HP.")).Value;
             
 
-            if (BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("com.RiskyLives.RiskyMod"))
+            if (RiskyModLoaded)
             {
                 slayerFix = false;
                 graceDuration = 0f;
@@ -424,6 +458,11 @@ namespace BanditTweaks
                     }
                 }
             };
+        }
+
+        private static float GetBandit2SlashBladeMinDurationHook(EntityStates.Bandit2.Weapon.SlashBlade self)
+        {
+            return 0.3f;
         }
 
         public void ToggleFireMode()
