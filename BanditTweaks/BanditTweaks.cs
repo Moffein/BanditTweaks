@@ -14,7 +14,7 @@ namespace BanditTweaks
     [BepInDependency("com.RiskyLives.RiskyMod", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.bepis.r2api")]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.5.2")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.6.0")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -32,8 +32,7 @@ namespace BanditTweaks
 
         public static bool quickdrawEnabled = false;
         public static bool RiskyModLoaded = false;
-
-        bool backstabBandFix = true;
+        private static BodyIndex Bandit2Index;
 
         [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
         private bool CheckRiskyModBandit2Core()
@@ -55,13 +54,12 @@ namespace BanditTweaks
                 return;
             }
 
-            float backstabCritBonus = base.Config.Bind<float>(new ConfigDefinition("00 - Passive", "Backstab Crit Bonus"), 1.5f, new ConfigDescription("*SERVER-SIDE* Multiply backstab damage if the attack is already a crit. Set to 1 to disable.")).Value;
-            if (backstabCritBonus < 1f)
+            GameObject BanditObject = LegacyResourcesAPI.Load<GameObject>("prefabs/characterbodies/bandit2body");
+            On.RoR2.BodyCatalog.Init += (orig) =>
             {
-                backstabCritBonus = 1f;
-            }
-
-            backstabBandFix = base.Config.Bind<bool>(new ConfigDefinition("00 - Passive", "Backstab Crit Elemental Band Fix"), true, new ConfigDescription("*SERVER-SIDE* Prevents crit backstabs from making weak attacks able to trigger Bands by making weak attacks hit an extra time for 50% damage (0.5 proc) instead.")).Value;
+                orig();
+                Bandit2Index = BodyCatalog.FindBodyIndex("Bandit2Body");
+            };
 
             quickdrawEnabled = base.Config.Bind<bool>(new ConfigDefinition("00 - Passive", "Enable Quickdraw"), false, new ConfigDescription("Using other skills will instantly reload your Primary.")).Value;
             
@@ -98,7 +96,7 @@ namespace BanditTweaks
             if (knifeTweaks)
             {
                 //Increase Hitbox Size
-                CharacterBody cb = RoR2Content.Survivors.Bandit2.bodyPrefab.GetComponent<CharacterBody>();
+                CharacterBody cb = BanditObject.GetComponent<CharacterBody>();
                 HitBoxGroup hbg = cb.GetComponentInChildren<HitBoxGroup>();
                 if (hbg.groupName == "SlashBlade")
                 {
@@ -147,7 +145,7 @@ namespace BanditTweaks
                 }
             }
 
-            bool cloakRequireRepress = !base.Config.Bind<bool>(new ConfigDefinition("03 - Utility", "Hold to Cloak"), true, new ConfigDescription("Holding down the Utility button cloaks you as soon as it is off cooldown.")).Value;
+            bool cloakRequireRepress = !base.Config.Bind<bool>(new ConfigDefinition("03 - Utility", "Auto Cloak when Holding"), true, new ConfigDescription("Holding down the Utility button cloaks you as soon as it is off cooldown.")).Value;
             float minCloakDuration = base.Config.Bind<float>(new ConfigDefinition("03 - Utility", "Minimum Cloak Duration"), 0.3f, new ConfigDescription("Minimum duration before other skills can be used after cloaking if Cloak Requires re-press is disabled.")).Value;
             if (minCloakDuration <= 0f)
             {
@@ -157,7 +155,7 @@ namespace BanditTweaks
             slayerFix = base.Config.Bind<bool>(new ConfigDefinition("04 - Special", "Slayer Fix"), true, new ConfigDescription("*SERVER-SIDE* Slayer (bonus damage against low HP enemies) now affects procs.")).Value;
             bool specialHold = base.Config.Bind<bool>(new ConfigDefinition("04 - Special", "Hold to Aim"), true, new ConfigDescription("The Special button can be held down to aim your shot. The shot will only shoot once you release.")).Value;
             bool specialSprintCancel = base.Config.Bind<bool>(new ConfigDefinition("04 - Special", "Cancel by Sprinting"), false, new ConfigDescription("Sprinting cancels your special.")).Value;
-            float graceDuration = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Grace Period Duration"), 1f, new ConfigDescription("*SERVER-SIDE* Triggers Special on-kill effect if enemy dies within this time window. 0 disables.")).Value;
+            float graceDuration = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Grace Period Duration"), 1.2f, new ConfigDescription("*SERVER-SIDE* Triggers Special on-kill effect if enemy dies within this time window. 0 disables.")).Value;
             float executeThreshold = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Execute Threshold"), 0f, new ConfigDescription("*SERVER-SIDE* Bandit's Specials instanatly kill enemies below this HP percent. 0 = disabled, 1.0 = 100% HP.")).Value;
             
 
@@ -168,7 +166,6 @@ namespace BanditTweaks
             }
 
             GracePeriodComponent.graceDuration = graceDuration;
-            GameObject BanditObject = Resources.Load<GameObject>("prefabs/characterbodies/bandit2body");
             SkillLocator skills = BanditObject.GetComponent<SkillLocator>();
 
             skills.utility.skillFamily.variants[0].skillDef.mustKeyPress = cloakRequireRepress;
@@ -231,7 +228,7 @@ namespace BanditTweaks
             {
                 On.EntityStates.Bandit2.StealthMode.GetMinimumInterruptPriority += (orig, self) =>
                 {
-                    return self.fixedAge > minCloakDuration ? InterruptPriority.Skill : InterruptPriority.Pain;
+                    return self.fixedAge > minCloakDuration ? InterruptPriority.Skill : InterruptPriority.Frozen;
                 };
             }
 
@@ -240,49 +237,6 @@ namespace BanditTweaks
                 orig(self);
 
                 Util.PlaySound(EntityStates.Bandit2.StealthMode.exitStealthSound, self.gameObject);
-            };
-
-            On.EntityStates.Bandit2.StealthMode.FireSmokebomb += (orig, self) =>
-            {
-                if (self.isAuthority)
-                {
-                    BlastAttack blastAttack = new BlastAttack();
-                    blastAttack.radius = StealthMode.blastAttackRadius;
-                    blastAttack.procCoefficient = StealthMode.blastAttackProcCoefficient;
-                    blastAttack.position = self.transform.position;
-                    blastAttack.attacker = self.gameObject;
-                    blastAttack.crit = self.characterBody.RollCrit();
-                    blastAttack.baseDamage = self.damageStat * StealthMode.blastAttackDamageCoefficient;
-                    blastAttack.falloffModel = BlastAttack.FalloffModel.None;
-                    blastAttack.damageType = DamageType.Stun1s;
-                    blastAttack.baseForce = StealthMode.blastAttackForce;
-                    blastAttack.teamIndex = TeamComponent.GetObjectTeam(blastAttack.attacker);
-                    blastAttack.attackerFiltering = AttackerFiltering.NeverHit;
-                    blastAttack.Fire();
-                }
-                if (StealthMode.smokeBombEffectPrefab)
-                {
-                    EffectManager.SimpleMuzzleFlash(StealthMode.smokeBombEffectPrefab, self.gameObject, StealthMode.smokeBombMuzzleString, false);
-                }
-                if (self.characterMotor)
-                {
-                    self.characterMotor.velocity = new Vector3(self.characterMotor.velocity.x, StealthMode.shortHopVelocity, self.characterMotor.velocity.z);
-                }
-            };
-
-            On.EntityStates.Bandit2.ThrowSmokebomb.OnEnter += (orig, self) =>
-            {
-                if (!cloakAnim && self.characterBody && self.characterMotor && self.characterMotor.isGrounded)
-                {
-                    self.attackSpeedStat = self.characterBody.attackSpeed;
-                    self.damageStat = self.characterBody.damage;
-                    self.critStat = self.characterBody.crit;
-                    self.moveSpeedStat = self.characterBody.moveSpeed;
-                }
-                else
-                {
-                    orig(self);
-                }
             };
 
             On.EntityStates.Bandit2.ThrowSmokebomb.GetMinimumInterruptPriority += (orig, self) =>
@@ -334,16 +288,13 @@ namespace BanditTweaks
                     damageInfo.damage *= Mathf.Lerp(3f, 1f, self.combinedHealthFraction);
                 }
 
-                bool backstabSecondHit = false;
-                DamageInfo backstabSecondDamageInfo = null;
-
                 DamageType dt = damageInfo.damageType & (DamageType.ResetCooldownsOnKill | DamageType.GiveSkullOnKill);
                 GracePeriodComponent gc = null;
                 CharacterBody attackerBody = null;
                 if (damageInfo.attacker)
                 {
                     attackerBody = damageInfo.attacker.GetComponent<CharacterBody>();
-                    if (attackerBody && attackerBody.baseNameToken == "BANDITRELOADED_BODY_NAME")
+                    if (attackerBody && attackerBody.bodyIndex != Bandit2Index)
                     {
                         attackerBody = null;
                     }
@@ -367,40 +318,6 @@ namespace BanditTweaks
                             damageInfo.damageType |= DamageType.GiveSkullOnKill;
                         }
                     }
-
-                    if (backstabCritBonus > 1f && damageInfo.damage > 0f && damageInfo.crit)
-                    {
-                        Vector3 vector = attackerBody.corePosition - damageInfo.position;
-                        if ((attackerBody.canPerformBackstab && (damageInfo.damageType & DamageType.DoT) != DamageType.DoT && (!damageInfo.procChainMask.HasProc(ProcType.Backstab) )
-                        && BackstabManager.IsBackstab(-vector, self.body)))
-                        {
-                            float damageCoefficient = damageInfo.damage / attackerBody.damage;
-                            if (!backstabBandFix || damageCoefficient >= 4f)
-                            {
-                                damageInfo.damage *= backstabCritBonus;
-                            }
-                            else
-                            {
-                                backstabSecondHit = true;
-                                backstabSecondDamageInfo = new DamageInfo
-                                {
-                                    attacker = damageInfo.attacker,
-                                    crit = damageInfo.crit,
-                                    damage = damageInfo.damage * (backstabCritBonus - 1f),
-                                    damageColorIndex = damageInfo.damageColorIndex,
-                                    damageType = damageInfo.damageType & ~DamageType.SuperBleedOnCrit,
-                                    dotIndex = damageInfo.dotIndex,
-                                    force = damageInfo.force * 0.5f,
-                                    inflictor = damageInfo.inflictor,
-                                    position = damageInfo.position,
-                                    procChainMask = damageInfo.procChainMask,
-                                    procCoefficient = damageInfo.procCoefficient * 0.5f,
-                                    rejected = damageInfo.rejected
-                                };
-                                backstabSecondDamageInfo.procChainMask.AddProc(ProcType.Backstab);
-                            }
-                        }
-                    }
                 }
 
                 orig(self, damageInfo);
@@ -419,11 +336,6 @@ namespace BanditTweaks
 
                 if (self.alive)
                 {
-                    if (backstabSecondHit && !damageInfo.rejected)
-                    {
-                        orig(self, backstabSecondDamageInfo);
-                    }
-
                     if (executeThreshold > 0f && (damageInfo.damageType & (DamageType.ResetCooldownsOnKill | DamageType.GiveSkullOnKill)) > 0 && attackerBody)
                     {
                         float executePercent = self.isInFrozenState ? 0.3f : 0f;
@@ -450,7 +362,7 @@ namespace BanditTweaks
                 orig(self);
                 if (enableFireSelect && self.targetSkill && self.targetSkillSlot == SkillSlot.Primary)
                 {
-                    if (self.targetSkill.characterBody.baseNameToken == "BANDIT2_BODY_NAME")
+                    if (self.targetSkill.characterBody.bodyIndex == Bandit2Index)
                     {
                         self.stockText.gameObject.SetActive(true);
                         self.stockText.fontSize = 12f;
@@ -497,21 +409,5 @@ namespace BanditTweaks
                 fireMode = BanditFireMode.Spam;
             }
         }
-    }
-}
-
-namespace R2API.Utils
-{
-    [AttributeUsage(AttributeTargets.Assembly)]
-    public class ManualNetworkRegistrationAttribute : Attribute
-    {
-    }
-}
-
-namespace EnigmaticThunder
-{
-    [AttributeUsage(AttributeTargets.Assembly)]
-    public class ManualNetworkRegistrationAttribute : Attribute
-    {
     }
 }
