@@ -7,12 +7,14 @@ using BepInEx.Configuration;
 using EntityStates.Bandit2;
 using System.Runtime.CompilerServices;
 using R2API.Utils;
+using R2API;
 using MonoMod.RuntimeDetour;
 
 namespace BanditTweaks
 {
     [BepInDependency("com.RiskyLives.RiskyMod", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("com.bepis.r2api")]
     [NetworkCompatibility(CompatibilityLevel.NoNeedForSync, VersionStrictness.DifferentModVersionsAreOk)]
     [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.6.1")]
     public class BanditTweaks : BaseUnityPlugin
