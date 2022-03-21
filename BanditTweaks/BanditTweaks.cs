@@ -13,8 +13,8 @@ namespace BanditTweaks
 {
     [BepInDependency("com.RiskyLives.RiskyMod", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInDependency("com.bepis.r2api")]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.6.0")]
+    [NetworkCompatibility(CompatibilityLevel.NoNeedForSync, VersionStrictness.DifferentModVersionsAreOk)]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.6.1")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
