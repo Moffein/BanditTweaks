@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using R2API.Utils;
 using R2API;
 using MonoMod.RuntimeDetour;
+using RoR2.Projectile;
 
 namespace BanditTweaks
 {
@@ -16,7 +17,7 @@ namespace BanditTweaks
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.bepis.r2api")]
     [NetworkCompatibility(CompatibilityLevel.NoNeedForSync, VersionStrictness.DifferentModVersionsAreOk)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.6.1")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.7.0")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -82,6 +83,8 @@ namespace BanditTweaks
 
             bool knifeTweaks = base.Config.Bind<bool>(new ConfigDefinition("02 - Secondary", "Serrated Dagger Tweaks"), true, new ConfigDescription("Serrated Dagger lunges while sprinting and has a larger hitbox.")).Value;
             bool noKnifeAttackSpeed = base.Config.Bind<bool>(new ConfigDefinition("02 - Secondary", "Serrated Dagger Minimum Duration"), true, new ConfigDescription("Serrated Dagger has a minimum duration of 0.3s so that the lunge doesn't stop working at high attack speeds.")).Value;
+            bool superBleedIgnoresArmor = base.Config.Bind<bool>(new ConfigDefinition("02 - Secondary", "Hemorrhage Ignore Armor"), true, new ConfigDescription("*SERVER-SIDE* Hemorrhage ignores positive armor values.")).Value;
+            bool throwKnifeTweaks = base.Config.Bind<bool>(new ConfigDefinition("02 - Secondary", "Serrated Shiv Tweaks"), true, new ConfigDescription("Serrated Shiv stuns on hit.")).Value;
 
             bool cloakAnim = base.Config.Bind<bool>(new ConfigDefinition("03 - Utility", "Smokebomb Anim while grounded"), true, new ConfigDescription("Enable the Smokebomb animation when on the ground.")).Value;
 
@@ -93,6 +96,51 @@ namespace BanditTweaks
             if (!enableAutoFire)
             {
                 enableFireSelect = false;
+            }
+
+            if (superBleedIgnoresArmor)
+            {
+                On.RoR2.HealthComponent.TakeDamage += (orig, self, damageInfo) =>
+                {
+                    if (damageInfo.dotIndex == RoR2.DotController.DotIndex.SuperBleed)
+                    {
+                        if (self.body.armor > 0f)
+                        {
+                            damageInfo.damage *= (100f + self.body.armor + self.adaptiveArmorValue) / 100f;
+                        }
+                    }
+                    orig(self, damageInfo);
+                };
+            }
+
+            if (throwKnifeTweaks)
+            {
+                On.EntityStates.Bandit2.Weapon.Bandit2FireShiv.FireShiv += (orig, self) =>
+                {
+                    if (EntityStates.Bandit2.Weapon.Bandit2FireShiv.muzzleEffectPrefab)
+                    {
+                        EffectManager.SimpleMuzzleFlash(EntityStates.Bandit2.Weapon.Bandit2FireShiv.muzzleEffectPrefab, self.gameObject, EntityStates.Bandit2.Weapon.Bandit2FireShiv.muzzleString, false);
+                    }
+                    if (self.isAuthority)
+                    {
+                        Ray aimRay = self.GetAimRay();
+                        if (self.projectilePrefab != null)
+                        {
+                            FireProjectileInfo fireProjectileInfo = new FireProjectileInfo
+                            {
+                                projectilePrefab = self.projectilePrefab,
+                                position = aimRay.origin,
+                                rotation = Util.QuaternionSafeLookRotation(aimRay.direction),
+                                owner = self.gameObject,
+                                damage = self.damageStat * self.damageCoefficient,
+                                force = self.force,
+                                crit = self.RollCrit(),
+                                damageTypeOverride = new DamageType?(DamageType.SuperBleedOnCrit | DamageType.Stun1s)
+                            };
+                            ProjectileManager.instance.FireProjectile(fireProjectileInfo);
+                        }
+                    }
+                };
             }
 
             if (knifeTweaks)
