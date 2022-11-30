@@ -10,6 +10,10 @@ using R2API.Utils;
 using R2API;
 using MonoMod.RuntimeDetour;
 using RoR2.Projectile;
+using MonoMod.Cil;
+using Mono.Cecil.Cil;
+using RoR2.Skills;
+using UnityEngine.AddressableAssets;
 
 namespace BanditTweaks
 {
@@ -17,7 +21,7 @@ namespace BanditTweaks
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.bepis.r2api")]
     [NetworkCompatibility(CompatibilityLevel.NoNeedForSync, VersionStrictness.DifferentModVersionsAreOk)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.7.0")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.8.0")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -104,9 +108,10 @@ namespace BanditTweaks
                 {
                     if (damageInfo.dotIndex == RoR2.DotController.DotIndex.SuperBleed)
                     {
-                        if (self.body.armor > 0f)
+                        float totalArmor = self.body.armor + self.adaptiveArmorValue;
+                        if (totalArmor > 0f)
                         {
-                            damageInfo.damage *= (100f + self.body.armor + self.adaptiveArmorValue) / 100f;
+                            damageInfo.damage *= (100f + totalArmor) / 100f;
                         }
                     }
                     orig(self, damageInfo);
@@ -193,6 +198,32 @@ namespace BanditTweaks
                     var getBandit2SlashBladeMinDuration = new Hook(typeof(EntityStates.Bandit2.Weapon.SlashBlade).GetMethodCached("get_minimumDuration"),
                     typeof(BanditTweaks).GetMethodCached(nameof(GetBandit2SlashBladeMinDurationHook)));
                 }
+
+                //Stop smokebomb anim from messing up melee anim
+                IL.EntityStates.Bandit2.ThrowSmokebomb.OnEnter += (il) =>
+                {
+                    ILCursor c = new ILCursor(il);
+                    c.GotoNext(MoveType.After,
+                        x => x.MatchLdstr("Gesture, Additive"));
+                    c.Emit(OpCodes.Ldarg_0);
+                    c.EmitDelegate<Func<string, EntityStates.Bandit2.ThrowSmokebomb, string>>((animLayer, self) =>
+                    {
+                        Animator modelAnimator = self.GetModelAnimator();
+                        if (modelAnimator)
+                        {
+                            int layerIndex = modelAnimator.GetLayerIndex("Gesture, Additive");
+                            if (layerIndex >= 0)
+                            {
+                                AnimatorStateInfo animStateInfo = modelAnimator.GetCurrentAnimatorStateInfo(layerIndex);
+                                if (animStateInfo.IsName("SlashBlade"))
+                                {
+                                    return "BanditTweaksInvalidLayer";
+                                }
+                            }
+                        }
+                        return animLayer;
+                    });
+                };
             }
 
             bool cloakRequireRepress = !base.Config.Bind<bool>(new ConfigDefinition("03 - Utility", "Auto Cloak when Holding"), true, new ConfigDescription("Holding down the Utility button cloaks you as soon as it is off cooldown.")).Value;
@@ -205,23 +236,32 @@ namespace BanditTweaks
             slayerFix = base.Config.Bind<bool>(new ConfigDefinition("04 - Special", "Slayer Fix"), true, new ConfigDescription("*SERVER-SIDE* Slayer (bonus damage against low HP enemies) now affects procs.")).Value;
             bool specialHold = base.Config.Bind<bool>(new ConfigDefinition("04 - Special", "Hold to Aim"), true, new ConfigDescription("The Special button can be held down to aim your shot. The shot will only shoot once you release.")).Value;
             bool specialSprintCancel = base.Config.Bind<bool>(new ConfigDefinition("04 - Special", "Cancel by Sprinting"), false, new ConfigDescription("Sprinting cancels your special.")).Value;
-            float graceDuration = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Grace Period Duration"), 1.2f, new ConfigDescription("*SERVER-SIDE* Triggers Special on-kill effect if enemy dies within this time window. 0 disables.")).Value;
+            float graceDurationLocalUser = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Grace Period Duration - Host"), 0.5f, new ConfigDescription("*SERVER-SIDE* Special on-kill grace period for Host and Singleplayer. 0 disables.")).Value;
+            float graceDurationClient = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Grace Period Duration - Client"), 1f, new ConfigDescription("*SERVER-SIDE* Special on-kill grace period for online clients. 0 disables.")).Value;
             float executeThreshold = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Execute Threshold"), 0f, new ConfigDescription("*SERVER-SIDE* Bandit's Specials instanatly kill enemies below this HP percent. 0 = disabled, 1.0 = 100% HP.")).Value;
             
 
             if (RiskyModLoaded)
             {
                 slayerFix = false;
-                graceDuration = 0f;
+                graceDurationLocalUser = 0f;
+                graceDurationClient = 0f;
             }
 
-            GracePeriodComponent.graceDuration = graceDuration;
+            GracePeriodComponent.graceDurationLocalUser = graceDurationLocalUser;
+            GracePeriodComponent.graceDurationClient = graceDurationClient;
             SkillLocator skills = BanditObject.GetComponent<SkillLocator>();
 
-            skills.utility.skillFamily.variants[0].skillDef.mustKeyPress = cloakRequireRepress;
+            SkillDef burstDef = Addressables.LoadAssetAsync<SkillDef>("RoR2/Base/Bandit2/FireShotgun2.asset").WaitForCompletion();
+            SkillDef blastDef = Addressables.LoadAssetAsync<SkillDef>("RoR2/Base/Bandit2/Bandit2Blast.asset").WaitForCompletion();
+            SkillDef cloakDef = Addressables.LoadAssetAsync<SkillDef>("RoR2/Base/Bandit2/ThrowSmokebomb.asset").WaitForCompletion();
+            SkillDef specialDef = Addressables.LoadAssetAsync<SkillDef>("RoR2/Base/Bandit2/ResetRevolver.asset").WaitForCompletion();
+            SkillDef specialAltDef = Addressables.LoadAssetAsync<SkillDef>("RoR2/Base/Bandit2/SkullRevolver.asset").WaitForCompletion();
 
-            skills.special.skillFamily.variants[0].skillDef.canceledFromSprinting = specialSprintCancel;
-            skills.special.skillFamily.variants[1].skillDef.canceledFromSprinting = specialSprintCancel;
+            cloakDef.mustKeyPress = cloakRequireRepress;
+
+            specialDef.canceledFromSprinting = specialSprintCancel;
+            specialAltDef.canceledFromSprinting = specialSprintCancel;
 
             if (burstBulletRadius > 0f)
             {
@@ -243,11 +283,11 @@ namespace BanditTweaks
 
             if (enableAutoFire)
             {
-                skills.primary.skillFamily.variants[0].skillDef.mustKeyPress = false;
-                skills.primary.skillFamily.variants[0].skillDef.interruptPriority = prioritizeReload ? InterruptPriority.Any : InterruptPriority.Skill;
+                burstDef.mustKeyPress = false;
+                burstDef.interruptPriority = prioritizeReload ? InterruptPriority.Any : InterruptPriority.Skill;
 
-                skills.primary.skillFamily.variants[1].skillDef.mustKeyPress = false;
-                skills.primary.skillFamily.variants[1].skillDef.interruptPriority = prioritizeReload ? InterruptPriority.Any : InterruptPriority.Skill;
+                blastDef.mustKeyPress = false;
+                blastDef.interruptPriority = prioritizeReload ? InterruptPriority.Any : InterruptPriority.Skill;
 
                 On.EntityStates.Bandit2.Weapon.Bandit2FirePrimaryBase.GetMinimumInterruptPriority += (orig, self) =>
                 {
@@ -281,13 +321,6 @@ namespace BanditTweaks
                     return self.fixedAge > minCloakDuration ? InterruptPriority.Skill : InterruptPriority.Frozen;
                 };
             }
-
-            On.EntityStates.Bandit2.StealthMode.OnExit += (orig, self) =>
-            {
-                orig(self);
-
-                Util.PlaySound(EntityStates.Bandit2.StealthMode.exitStealthSound, self.gameObject);
-            };
 
             On.EntityStates.Bandit2.ThrowSmokebomb.GetMinimumInterruptPriority += (orig, self) =>
             {
@@ -351,7 +384,7 @@ namespace BanditTweaks
                 }
                 if (attackerBody)
                 {
-                    if (graceDuration > 0f)
+                    if (graceDurationLocalUser > 0f)
                     {
                         gc = self.gameObject.GetComponent<GracePeriodComponent>();
                         if (!gc)
@@ -372,11 +405,12 @@ namespace BanditTweaks
 
                 orig(self, damageInfo);
 
-                if (graceDuration > 0f && gc && attackerBody && attackerBody.master && !damageInfo.rejected)
+                if (gc && attackerBody && attackerBody.master && !damageInfo.rejected)
                 {
+                    float graceDuration = IsLocalUser(attackerBody) ? GracePeriodComponent.graceDurationLocalUser : GracePeriodComponent.graceDurationClient;
                     if (self.alive)
                     {
-                        gc.AddTimer(attackerBody, dt);
+                        gc.AddTimer(attackerBody, dt, graceDuration);
                     }
                     else
                     {
@@ -420,6 +454,19 @@ namespace BanditTweaks
                     }
                 }
             };
+        }
+
+        public static bool IsLocalUser(CharacterBody playerBody)
+        {
+            foreach (LocalUser user in LocalUserManager.readOnlyLocalUsersList)
+            {
+                if (playerBody == user.cachedBody)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static float GetBandit2SlashBladeMinDurationHook(EntityStates.Bandit2.Weapon.SlashBlade self)

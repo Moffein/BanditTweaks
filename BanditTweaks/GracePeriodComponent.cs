@@ -61,7 +61,7 @@ namespace BanditTweaks
             }
             hitList.Clear();
         }
-        public void AddTimer(CharacterBody b, DamageType dt)
+        public void AddTimer(CharacterBody b, DamageType dt, float graceDuration)
         {
             if (b.skillLocator)
             {
@@ -94,7 +94,8 @@ namespace BanditTweaks
             return false;
         }
 
-        public static float graceDuration = 0.5f;
+        public static float graceDurationLocalUser = 0.5f;
+        public static float graceDurationClient = 1f;
         private List<BanditTimer> hitList = new List<BanditTimer>();
         List<BanditTimer> del = new List<BanditTimer>();
         public class BanditTimer
