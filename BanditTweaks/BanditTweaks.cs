@@ -21,7 +21,7 @@ namespace BanditTweaks
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.bepis.r2api")]
     [NetworkCompatibility(CompatibilityLevel.NoNeedForSync, VersionStrictness.DifferentModVersionsAreOk)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.8.0")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.8.2")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -201,6 +201,81 @@ namespace BanditTweaks
 
                 //Stop smokebomb anim from messing up melee anim
                 IL.EntityStates.Bandit2.ThrowSmokebomb.OnEnter += (il) =>
+                {
+                    ILCursor c = new ILCursor(il);
+                    c.GotoNext(MoveType.After,
+                        x => x.MatchLdstr("Gesture, Additive"));
+                    c.Emit(OpCodes.Ldarg_0);
+                    c.EmitDelegate<Func<string, EntityStates.Bandit2.ThrowSmokebomb, string>>((animLayer, self) =>
+                    {
+                        Animator modelAnimator = self.GetModelAnimator();
+                        if (modelAnimator)
+                        {
+                            int layerIndex = modelAnimator.GetLayerIndex("Gesture, Additive");
+                            if (layerIndex >= 0)
+                            {
+                                AnimatorStateInfo animStateInfo = modelAnimator.GetCurrentAnimatorStateInfo(layerIndex);
+                                if (animStateInfo.IsName("SlashBlade"))
+                                {
+                                    return "BanditTweaksInvalidLayer";
+                                }
+                            }
+                        }
+                        return animLayer;
+                    });
+                };
+
+                IL.EntityStates.Bandit2.Weapon.Bandit2FirePrimaryBase.OnEnter += (il) =>
+                {
+                    ILCursor c = new ILCursor(il);
+                    c.GotoNext(MoveType.After,
+                        x => x.MatchLdstr("Gesture, Additive"));
+                    c.Emit(OpCodes.Ldarg_0);
+                    c.EmitDelegate<Func<string, EntityStates.Bandit2.ThrowSmokebomb, string>>((animLayer, self) =>
+                    {
+                        Animator modelAnimator = self.GetModelAnimator();
+                        if (modelAnimator)
+                        {
+                            int layerIndex = modelAnimator.GetLayerIndex("Gesture, Additive");
+                            if (layerIndex >= 0)
+                            {
+                                AnimatorStateInfo animStateInfo = modelAnimator.GetCurrentAnimatorStateInfo(layerIndex);
+                                if (animStateInfo.IsName("SlashBlade"))
+                                {
+                                    return "BanditTweaksInvalidLayer";
+                                }
+                            }
+                        }
+                        return animLayer;
+                    });
+                };
+
+                IL.EntityStates.Bandit2.Weapon.Reload.OnEnter += (il) =>
+                {
+                    ILCursor c = new ILCursor(il);
+                    c.GotoNext(MoveType.After,
+                        x => x.MatchLdstr("Gesture, Additive"));
+                    c.Emit(OpCodes.Ldarg_0);
+                    c.EmitDelegate<Func<string, EntityStates.Bandit2.ThrowSmokebomb, string>>((animLayer, self) =>
+                    {
+                        Animator modelAnimator = self.GetModelAnimator();
+                        if (modelAnimator)
+                        {
+                            int layerIndex = modelAnimator.GetLayerIndex("Gesture, Additive");
+                            if (layerIndex >= 0)
+                            {
+                                AnimatorStateInfo animStateInfo = modelAnimator.GetCurrentAnimatorStateInfo(layerIndex);
+                                if (animStateInfo.IsName("SlashBlade"))
+                                {
+                                    return "BanditTweaksInvalidLayer";
+                                }
+                            }
+                        }
+                        return animLayer;
+                    });
+                };
+
+                IL.EntityStates.Bandit2.Weapon.EnterReload.OnEnter += (il) =>
                 {
                     ILCursor c = new ILCursor(il);
                     c.GotoNext(MoveType.After,
