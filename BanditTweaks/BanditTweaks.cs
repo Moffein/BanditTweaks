@@ -21,7 +21,7 @@ namespace BanditTweaks
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.bepis.r2api")]
     [NetworkCompatibility(CompatibilityLevel.NoNeedForSync, VersionStrictness.DifferentModVersionsAreOk)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.8.2")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.9.0")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -84,6 +84,8 @@ namespace BanditTweaks
 
             float burstBulletRadius = base.Config.Bind<float>(new ConfigDefinition("01a - Burst", "Bullet Radius"), 0.3f, new ConfigDescription("How wide bullets are (0 is vanilla).")).Value;
             float blastBulletRadius = base.Config.Bind<float>(new ConfigDefinition("01b - Blast", "Bullet Radius"), 0.4f, new ConfigDescription("How wide bullets are (0 is vanilla).")).Value;
+            bool blastReduceSpread = base.Config.Bind<bool>(new ConfigDefinition("01b - Blast", "Remove Spread"), true, new ConfigDescription("Removes spread inaccuracy.")).Value;
+            bool blastPenetration = base.Config.Bind<bool>(new ConfigDefinition("01b - Blast", "Pierce Enemies"), true, new ConfigDescription("Bullets can pierce through multiple enemies.")).Value;
 
             bool knifeTweaks = base.Config.Bind<bool>(new ConfigDefinition("02 - Secondary", "Serrated Dagger Tweaks"), true, new ConfigDescription("Serrated Dagger lunges while sprinting and has a larger hitbox.")).Value;
             bool noKnifeAttackSpeed = base.Config.Bind<bool>(new ConfigDefinition("02 - Secondary", "Serrated Dagger Minimum Duration"), true, new ConfigDescription("Serrated Dagger has a minimum duration of 0.3s so that the lunge doesn't stop working at high attack speeds.")).Value;
@@ -100,6 +102,20 @@ namespace BanditTweaks
             if (!enableAutoFire)
             {
                 enableFireSelect = false;
+            }
+
+            if (blastPenetration || blastReduceSpread)
+            {
+                On.EntityStates.Bandit2.Weapon.Bandit2FireRifle.ModifyBullet += (orig, self, bulletAttack) =>
+                {
+                    orig(self, bulletAttack);
+                    if (blastPenetration) bulletAttack.stopperMask = LayerIndex.world.intVal;
+                    if (blastReduceSpread)
+                    {
+                        bulletAttack.minSpread = 0f;
+                        bulletAttack.maxSpread = 0f;
+                    }
+                };
             }
 
             if (superBleedIgnoresArmor)
