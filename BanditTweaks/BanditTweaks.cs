@@ -21,7 +21,7 @@ namespace BanditTweaks
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.bepis.r2api")]
     [NetworkCompatibility(CompatibilityLevel.NoNeedForSync, VersionStrictness.DifferentModVersionsAreOk)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.9.0")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.9.1")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -68,7 +68,7 @@ namespace BanditTweaks
                 Bandit2Index = BodyCatalog.FindBodyIndex("Bandit2Body");
             };
 
-            quickdrawEnabled = base.Config.Bind<bool>(new ConfigDefinition("00 - Passive", "Enable Quickdraw"), false, new ConfigDescription("Using other skills will instantly reload your Primary.")).Value;
+            quickdrawEnabled = base.Config.Bind<bool>(new ConfigDefinition("00 - Passive", "Enable Quickdraw"), false, new ConfigDescription("From BanditReloaded. Using other skills will instantly reload your Primary.")).Value;
             
             
             bool enableAutoFire = base.Config.Bind<bool>(new ConfigDefinition("01 - Primary", "Enable Autofire"), true, new ConfigDescription("Holding down the Primary button automatically fires your gun.")).Value;
@@ -83,7 +83,7 @@ namespace BanditTweaks
             bool prioritizeReload = base.Config.Bind<bool>(new ConfigDefinition("01 - Primary", "Prioritize Reload"), false, new ConfigDescription("Makes reloading take priority over shooting.")).Value;
 
             float burstBulletRadius = base.Config.Bind<float>(new ConfigDefinition("01a - Burst", "Bullet Radius"), 0.3f, new ConfigDescription("How wide bullets are (0 is vanilla).")).Value;
-            float blastBulletRadius = base.Config.Bind<float>(new ConfigDefinition("01b - Blast", "Bullet Radius"), 0.4f, new ConfigDescription("How wide bullets are (0 is vanilla).")).Value;
+            float blastBulletRadius = base.Config.Bind<float>(new ConfigDefinition("01b - Blast", "Bullet Radius"), 0.5f, new ConfigDescription("How wide bullets are (0 is vanilla).")).Value;
             bool blastReduceSpread = base.Config.Bind<bool>(new ConfigDefinition("01b - Blast", "Remove Spread"), true, new ConfigDescription("Removes spread inaccuracy.")).Value;
             bool blastPenetration = base.Config.Bind<bool>(new ConfigDefinition("01b - Blast", "Pierce Enemies"), true, new ConfigDescription("Bullets can pierce through multiple enemies.")).Value;
 
@@ -327,8 +327,8 @@ namespace BanditTweaks
             slayerFix = base.Config.Bind<bool>(new ConfigDefinition("04 - Special", "Slayer Fix"), true, new ConfigDescription("*SERVER-SIDE* Slayer (bonus damage against low HP enemies) now affects procs.")).Value;
             bool specialHold = base.Config.Bind<bool>(new ConfigDefinition("04 - Special", "Hold to Aim"), true, new ConfigDescription("The Special button can be held down to aim your shot. The shot will only shoot once you release.")).Value;
             bool specialSprintCancel = base.Config.Bind<bool>(new ConfigDefinition("04 - Special", "Cancel by Sprinting"), false, new ConfigDescription("Sprinting cancels your special.")).Value;
-            float graceDurationLocalUser = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Grace Period Duration - Host"), 0.5f, new ConfigDescription("*SERVER-SIDE* Special on-kill grace period for Host and Singleplayer. 0 disables.")).Value;
-            float graceDurationClient = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Grace Period Duration - Client"), 1f, new ConfigDescription("*SERVER-SIDE* Special on-kill grace period for online clients. 0 disables.")).Value;
+            float graceDurationLocalUser = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Grace Period Duration - Host"), 0.25f, new ConfigDescription("*SERVER-SIDE* Special on-kill grace period for Host and Singleplayer. 0 disables.")).Value;
+            float graceDurationClient = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Grace Period Duration - Client"), 0.5f, new ConfigDescription("*SERVER-SIDE* Special on-kill grace period for online clients. 0 disables.")).Value;
             float executeThreshold = base.Config.Bind<float>(new ConfigDefinition("04 - Special", "Execute Threshold"), 0f, new ConfigDescription("*SERVER-SIDE* Bandit's Specials instanatly kill enemies below this HP percent. 0 = disabled, 1.0 = 100% HP.")).Value;
             
 
