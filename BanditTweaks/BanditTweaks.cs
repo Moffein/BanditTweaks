@@ -4,11 +4,7 @@ using RoR2;
 using UnityEngine;
 using EntityStates;
 using BepInEx.Configuration;
-using EntityStates.Bandit2;
 using System.Runtime.CompilerServices;
-using R2API.Utils;
-using R2API;
-using MonoMod.RuntimeDetour;
 using RoR2.Projectile;
 using MonoMod.Cil;
 using Mono.Cecil.Cil;
@@ -19,9 +15,7 @@ namespace BanditTweaks
 {
     [BepInDependency("com.RiskyLives.RiskyMod", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInDependency("com.bepis.r2api")]
-    [NetworkCompatibility(CompatibilityLevel.NoNeedForSync, VersionStrictness.DifferentModVersionsAreOk)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.9.1")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.9.2")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -47,6 +41,11 @@ namespace BanditTweaks
             return !RiskyMod.Survivors.Bandit2.Bandit2Core.enabled;
         }
 
+        private void OnLoad()
+        {
+            Bandit2Index = BodyCatalog.FindBodyIndex("Bandit2Body");
+        }
+
         public void Awake()
         {
             RiskyModLoaded = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("com.RiskyLives.RiskyMod");
@@ -62,11 +61,7 @@ namespace BanditTweaks
             }
 
             GameObject BanditObject = LegacyResourcesAPI.Load<GameObject>("prefabs/characterbodies/bandit2body");
-            On.RoR2.BodyCatalog.Init += (orig) =>
-            {
-                orig();
-                Bandit2Index = BodyCatalog.FindBodyIndex("Bandit2Body");
-            };
+            RoR2Application.onLoad += OnLoad;
 
             quickdrawEnabled = base.Config.Bind<bool>(new ConfigDefinition("00 - Passive", "Enable Quickdraw"), false, new ConfigDescription("From BanditReloaded. Using other skills will instantly reload your Primary.")).Value;
             
@@ -211,8 +206,7 @@ namespace BanditTweaks
 
                 if (noKnifeAttackSpeed)
                 {
-                    var getBandit2SlashBladeMinDuration = new Hook(typeof(EntityStates.Bandit2.Weapon.SlashBlade).GetMethodCached("get_minimumDuration"),
-                    typeof(BanditTweaks).GetMethodCached(nameof(GetBandit2SlashBladeMinDurationHook)));
+                    SetEntityStateField("entitystates.bandit2.weapon.slashblade", "ignoreAttackSpeed", "1");
                 }
 
                 //Stop smokebomb anim from messing up melee anim
@@ -596,6 +590,20 @@ namespace BanditTweaks
             {
                 fireMode = BanditFireMode.Spam;
             }
+        }
+
+        internal bool SetEntityStateField(string entityStateName, string fieldName, string value)
+        {
+            EntityStateConfiguration esc = LegacyResourcesAPI.Load<EntityStateConfiguration>("entitystateconfigurations/" + entityStateName);
+            for (int i = 0; i < esc.serializedFieldsCollection.serializedFields.Length; i++)
+            {
+                if (esc.serializedFieldsCollection.serializedFields[i].fieldName == fieldName)
+                {
+                    esc.serializedFieldsCollection.serializedFields[i].fieldValue.stringValue = value;
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }

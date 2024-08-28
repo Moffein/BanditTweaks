@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -75,9 +75,6 @@
       <HintPath>libs\BepInEx\MonoMod.Utils.dll</HintPath>
     </Reference>
     <Reference Include="&#xD;&#xA;               ">
-      <HintPath>libs\R2API\R2API.dll</HintPath>
-    </Reference>
-    <Reference Include="R2API">
       <HintPath>libs\R2API\R2API.dll</HintPath>
     </Reference>
     <Reference Include="Rewired_CSharp">
