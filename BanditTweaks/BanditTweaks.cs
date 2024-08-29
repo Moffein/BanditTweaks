@@ -15,7 +15,7 @@ namespace BanditTweaks
 {
     [BepInDependency("com.RiskyLives.RiskyMod", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("de.userstorm.banditweaponmodes", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.9.2")]
+    [BepInPlugin("com.Moffein.BanditTweaks", "Bandit Tweaks", "1.9.3")]
     public class BanditTweaks : BaseUnityPlugin
     {
         public enum BanditFireMode
@@ -424,7 +424,7 @@ namespace BanditTweaks
             {
                 if (!specialSprintCancel)
                 {
-                    self.fixedAge += Time.fixedDeltaTime;
+                    self.fixedAge += self.GetDeltaTime();
                 }
                 else
                 {
@@ -436,7 +436,7 @@ namespace BanditTweaks
             {
                 if (specialHold)
                 {
-                    self.fixedAge += Time.fixedDeltaTime;
+                    self.fixedAge += self.GetDeltaTime();
                     if (self.fixedAge > self.duration && !self.inputBank.skill4.down)
                     {
                         self.outer.SetNextState(self.GetNextState());
